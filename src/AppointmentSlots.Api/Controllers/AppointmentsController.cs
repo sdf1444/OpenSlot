@@ -2,6 +2,7 @@ using AppointmentSlots.Api.Application;
 using AppointmentSlots.Api.Contracts;
 using Microsoft.AspNetCore.Mvc;
 namespace AppointmentSlots.Api.Controllers;
+
 [ApiController]
 [Route("api/appointments")]
 public sealed class AppointmentsController(AppointmentService appointments) : ControllerBase

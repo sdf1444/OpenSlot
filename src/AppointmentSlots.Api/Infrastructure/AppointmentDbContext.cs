@@ -1,6 +1,7 @@
 using AppointmentSlots.Api.Domain;
 using Microsoft.EntityFrameworkCore;
 namespace AppointmentSlots.Api.Infrastructure;
+
 public sealed class AppointmentDbContext(DbContextOptions<AppointmentDbContext> options) : DbContext(options)
 {
     public DbSet<AppointmentSlot> Slots => Set<AppointmentSlot>();

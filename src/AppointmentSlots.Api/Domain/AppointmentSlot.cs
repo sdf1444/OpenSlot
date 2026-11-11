@@ -1,4 +1,5 @@
 namespace AppointmentSlots.Api.Domain;
+
 public sealed class AppointmentSlot
 {
     public Guid Id { get; set; } = Guid.NewGuid();

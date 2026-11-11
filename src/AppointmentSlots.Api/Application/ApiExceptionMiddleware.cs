@@ -1,5 +1,6 @@
 using System.Text.Json;
 namespace AppointmentSlots.Api.Application;
+
 public sealed class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExceptionMiddleware> logger)
 {
     public async Task InvokeAsync(HttpContext context)
@@ -13,8 +14,10 @@ public sealed class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExce
             context.Response.ContentType = "application/problem+json";
             await context.Response.WriteAsync(JsonSerializer.Serialize(new
             {
-                type = "about:blank", title = status == 500 ? "An unexpected server error occurred." : exception.Message,
-                status, traceId = context.TraceIdentifier
+                type = "about:blank",
+                title = status == 500 ? "An unexpected server error occurred." : exception.Message,
+                status,
+                traceId = context.TraceIdentifier
             }));
         }
     }

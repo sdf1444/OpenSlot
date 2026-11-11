@@ -1,6 +1,7 @@
 using AppointmentSlots.Api.Domain;
 using Xunit;
 namespace AppointmentSlots.Tests;
+
 public sealed class BookingRulesTests
 {
     public static TheoryData<SlotState, int, bool> BookCases => new()

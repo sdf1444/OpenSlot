@@ -1,6 +1,7 @@
 using AppointmentSlots.Api.Domain;
 using Microsoft.EntityFrameworkCore;
 namespace AppointmentSlots.Api.Infrastructure;
+
 public static class DatabaseInitializer
 {
     public static async Task InitializeAsync(AppointmentDbContext db, CancellationToken ct = default)
@@ -17,9 +18,18 @@ public static class DatabaseInitializer
     private static AppointmentSlot Seed(string service, string provider, string clinic, DateTimeOffset startsAt, int minutes)
     {
         var now = DateTimeOffset.UtcNow;
-        var slot = new AppointmentSlot { ServiceType = service, ProviderName = provider, ClinicName = clinic,
-            StartsAt = startsAt, EndsAt = startsAt.AddMinutes(minutes), State = SlotState.Available,
-            Revision = 1, CreatedAt = now, UpdatedAt = now };
+        var slot = new AppointmentSlot
+        {
+            ServiceType = service,
+            ProviderName = provider,
+            ClinicName = clinic,
+            StartsAt = startsAt,
+            EndsAt = startsAt.AddMinutes(minutes),
+            State = SlotState.Available,
+            Revision = 1,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
         slot.Events.Add(new AppointmentEvent { EventType = "SlotPublished", Description = "Appointment slot published", OccurredAt = now });
         return slot;
     }

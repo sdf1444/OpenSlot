@@ -38,11 +38,14 @@ public sealed class AppointmentService(AppointmentDbContext db, TimeProvider clo
     public async Task<SlotDetailResponse> CreateAsync(CreateSlotRequest request, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
-        var start = request.StartsAt.ToUniversalTime();
-        var end = request.EndsAt.ToUniversalTime();
-        if (start <= now) throw new ApiException(400, "An appointment must start in the future.");
-        if (end <= start) throw new ApiException(400, "The end time must be later than the start time.");
-        var provider = request.ProviderName.Trim();
+        var start = AppointmentValidation.ToUtc(request.StartsAt);
+        var end = AppointmentValidation.ToUtc(request.EndsAt);
+        AppointmentValidation.EnsureFutureWindow(start, end, now);
+
+        var serviceType = AppointmentValidation.RequireText(request.ServiceType, "Service type", 3, 70);
+        var provider = AppointmentValidation.RequireText(request.ProviderName, "Provider name", 2, 70);
+        var clinicName = AppointmentValidation.RequireText(request.ClinicName, "Clinic name", 3, 100);
+
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         try
         {
@@ -51,8 +54,15 @@ public sealed class AppointmentService(AppointmentDbContext db, TimeProvider clo
             if (conflict) throw new ApiException(409, "This provider already has an appointment during that time.");
             var slot = new AppointmentSlot
             {
-                ServiceType = request.ServiceType.Trim(), ProviderName = provider, ClinicName = request.ClinicName.Trim(),
-                StartsAt = start, EndsAt = end, State = SlotState.Available, CreatedAt = now, UpdatedAt = now, Revision = 1
+                ServiceType = serviceType,
+                ProviderName = provider,
+                ClinicName = clinicName,
+                StartsAt = start,
+                EndsAt = end,
+                State = SlotState.Available,
+                CreatedAt = now,
+                UpdatedAt = now,
+                Revision = 1
             };
             slot.Events.Add(new AppointmentEvent { EventType = "SlotPublished", Description = "Appointment slot published", OccurredAt = now });
             db.Slots.Add(slot);
@@ -76,29 +86,38 @@ public sealed class AppointmentService(AppointmentDbContext db, TimeProvider clo
             var now = clock.GetUtcNow();
             if (!BookingRules.CanBook(slot.State, slot.StartsAt, now))
                 throw new ApiException(409, "This appointment is unavailable or has already started.");
-            var email = request.Email.Trim().ToLowerInvariant();
+
+            var patientName = AppointmentValidation.RequireText(request.PatientName, "Patient name", 2, 70);
+            var email = AppointmentValidation.RequireEmail(request.Email);
             var code = Convert.ToHexString(RandomNumberGenerator.GetBytes(4));
             var booking = slot.Booking;
             if (booking is null)
             {
                 booking = new AppointmentBooking
                 {
-                    AppointmentSlotId = slot.Id, PatientName = request.PatientName.Trim(), Email = email,
-                    ConfirmationCode = code, State = BookingState.Confirmed, CreatedAt = now, UpdatedAt = now
+                    AppointmentSlotId = slot.Id,
+                    PatientName = patientName,
+                    Email = email,
+                    ConfirmationCode = code,
+                    State = BookingState.Confirmed,
+                    CreatedAt = now,
+                    UpdatedAt = now
                 };
                 db.Bookings.Add(booking);
                 slot.Booking = booking;
             }
             else
             {
-                booking.PatientName = request.PatientName.Trim(); booking.Email = email;
+                booking.PatientName = patientName; booking.Email = email;
                 booking.ConfirmationCode = code; booking.State = BookingState.Confirmed; booking.UpdatedAt = now;
             }
             slot.State = SlotState.Booked; slot.Revision++; slot.UpdatedAt = now;
             var appointmentBooked = new AppointmentEvent
             {
-                AppointmentSlotId = slot.Id, EventType = "AppointmentBooked",
-                Description = "An appointment was booked", OccurredAt = now
+                AppointmentSlotId = slot.Id,
+                EventType = "AppointmentBooked",
+                Description = "An appointment was booked",
+                OccurredAt = now
             };
             db.Events.Add(appointmentBooked);
             await db.SaveChangesAsync(ct);
@@ -116,8 +135,8 @@ public sealed class AppointmentService(AppointmentDbContext db, TimeProvider clo
 
     public async Task CancelBookingAsync(CancelBookingRequest request, CancellationToken ct)
     {
-        var email = request.Email.Trim().ToLowerInvariant();
-        var code = request.ConfirmationCode.Trim().ToUpperInvariant();
+        var email = AppointmentValidation.RequireEmail(request.Email);
+        var code = AppointmentValidation.RequireText(request.ConfirmationCode, "Confirmation code", 6, 16).ToUpperInvariant();
         var booking = await db.Bookings.Include(x => x.Slot).ThenInclude(x => x.Events)
             .SingleOrDefaultAsync(x => x.Email == email && x.ConfirmationCode == code, ct)
             ?? throw new ApiException(404, "No appointment matches that email and confirmation code.");
@@ -128,8 +147,10 @@ public sealed class AppointmentService(AppointmentDbContext db, TimeProvider clo
         booking.Slot.State = SlotState.Available; booking.Slot.Revision++; booking.Slot.UpdatedAt = now;
         var appointmentCancelled = new AppointmentEvent
         {
-            AppointmentSlotId = booking.Slot.Id, EventType = "AppointmentCancelled",
-            Description = "An appointment was cancelled", OccurredAt = now
+            AppointmentSlotId = booking.Slot.Id,
+            EventType = "AppointmentCancelled",
+            Description = "An appointment was cancelled",
+            OccurredAt = now
         };
         db.Events.Add(appointmentCancelled);
         try { await db.SaveChangesAsync(ct); }
@@ -145,8 +166,10 @@ public sealed class AppointmentService(AppointmentDbContext db, TimeProvider clo
         slot.State = SlotState.Cancelled; slot.Revision++; slot.UpdatedAt = clock.GetUtcNow();
         var slotCancelled = new AppointmentEvent
         {
-            AppointmentSlotId = slot.Id, EventType = "SlotCancelled",
-            Description = "Appointment slot removed", OccurredAt = slot.UpdatedAt
+            AppointmentSlotId = slot.Id,
+            EventType = "SlotCancelled",
+            Description = "Appointment slot removed",
+            OccurredAt = slot.UpdatedAt
         };
         db.Events.Add(slotCancelled);
         try { await db.SaveChangesAsync(ct); }

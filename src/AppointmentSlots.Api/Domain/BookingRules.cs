@@ -1,4 +1,5 @@
 namespace AppointmentSlots.Api.Domain;
+
 public static class BookingRules
 {
     public static bool CanBook(SlotState state, DateTimeOffset startsAt, DateTimeOffset now) =>
