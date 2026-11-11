@@ -86,6 +86,7 @@ public sealed class AppointmentService(AppointmentDbContext db, TimeProvider clo
                     AppointmentSlotId = slot.Id, PatientName = request.PatientName.Trim(), Email = email,
                     ConfirmationCode = code, State = BookingState.Confirmed, CreatedAt = now, UpdatedAt = now
                 };
+                db.Bookings.Add(booking);
                 slot.Booking = booking;
             }
             else
@@ -94,7 +95,12 @@ public sealed class AppointmentService(AppointmentDbContext db, TimeProvider clo
                 booking.ConfirmationCode = code; booking.State = BookingState.Confirmed; booking.UpdatedAt = now;
             }
             slot.State = SlotState.Booked; slot.Revision++; slot.UpdatedAt = now;
-            slot.Events.Add(new AppointmentEvent { EventType = "AppointmentBooked", Description = "An appointment was booked", OccurredAt = now });
+            var appointmentBooked = new AppointmentEvent
+            {
+                AppointmentSlotId = slot.Id, EventType = "AppointmentBooked",
+                Description = "An appointment was booked", OccurredAt = now
+            };
+            db.Events.Add(appointmentBooked);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             return new BookingReceipt(booking.Id, code, booking.PatientName, slot.ServiceType, slot.ClinicName,
@@ -120,7 +126,12 @@ public sealed class AppointmentService(AppointmentDbContext db, TimeProvider clo
         var now = clock.GetUtcNow();
         booking.State = BookingState.Cancelled; booking.UpdatedAt = now;
         booking.Slot.State = SlotState.Available; booking.Slot.Revision++; booking.Slot.UpdatedAt = now;
-        booking.Slot.Events.Add(new AppointmentEvent { EventType = "AppointmentCancelled", Description = "An appointment was cancelled", OccurredAt = now });
+        var appointmentCancelled = new AppointmentEvent
+        {
+            AppointmentSlotId = booking.Slot.Id, EventType = "AppointmentCancelled",
+            Description = "An appointment was cancelled", OccurredAt = now
+        };
+        db.Events.Add(appointmentCancelled);
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateConcurrencyException) { throw new ApiException(409, "The appointment changed while you were cancelling it. Refresh and try again."); }
     }
@@ -132,7 +143,12 @@ public sealed class AppointmentService(AppointmentDbContext db, TimeProvider clo
         if (slot.Revision != expectedRevision) throw new ApiException(409, "The slot changed. Refresh and try again.");
         if (slot.State != SlotState.Available) throw new ApiException(409, "Only an unbooked slot can be removed.");
         slot.State = SlotState.Cancelled; slot.Revision++; slot.UpdatedAt = clock.GetUtcNow();
-        slot.Events.Add(new AppointmentEvent { EventType = "SlotCancelled", Description = "Appointment slot removed", OccurredAt = slot.UpdatedAt });
+        var slotCancelled = new AppointmentEvent
+        {
+            AppointmentSlotId = slot.Id, EventType = "SlotCancelled",
+            Description = "Appointment slot removed", OccurredAt = slot.UpdatedAt
+        };
+        db.Events.Add(slotCancelled);
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateConcurrencyException) { throw new ApiException(409, "The slot changed concurrently. Refresh and try again."); }
         return ToDetail(slot);
