@@ -1,5 +1,6 @@
 using AppointmentSlots.Api.Application;
 using AppointmentSlots.Api.Contracts;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 namespace AppointmentSlots.Api.Controllers;
 
@@ -17,6 +18,7 @@ public sealed class AppointmentsController(AppointmentService appointments) : Co
         Ok(await appointments.GetAsync(id, ct));
 
     [HttpPost("slots")]
+    [Authorize]
     public async Task<ActionResult<SlotDetailResponse>> CreateSlot(CreateSlotRequest request, CancellationToken ct)
     {
         var slot = await appointments.CreateAsync(request, ct);
@@ -35,6 +37,7 @@ public sealed class AppointmentsController(AppointmentService appointments) : Co
     }
 
     [HttpPatch("slots/{id:guid}/cancel")]
+    [Authorize]
     public async Task<ActionResult<SlotDetailResponse>> CancelSlot(Guid id, [FromBody] int expectedRevision, CancellationToken ct) =>
         Ok(await appointments.CancelSlotAsync(id, expectedRevision, ct));
 }

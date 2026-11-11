@@ -17,6 +17,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Appointments: "Host=db;Port=5432;Database=appointments;Username=appointments;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
+      Coordinator__Username: "${COORDINATOR_USERNAME:-coordinator}"
+      Coordinator__Password: "${COORDINATOR_PASSWORD:?Set COORDINATOR_PASSWORD in .env}"
     ports:
       - "8080:8080"
     depends_on:

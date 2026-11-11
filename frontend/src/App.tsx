@@ -3,15 +3,30 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AppHeader } from "./components/AppHeader";
 import { BookingModal } from "./components/BookingModal";
 import { HeroSection } from "./components/HeroSection";
+import { LoginPage } from "./components/LoginPage";
 import { MessageBanner } from "./components/MessageBanner";
 import { ReceiptModal } from "./components/ReceiptModal";
 import { SlotDetailPanel } from "./components/SlotDetailPanel";
 import { SlotList } from "./components/SlotList";
 import { StatsPanel } from "./components/StatsPanel";
 import { api } from "./lib/api";
-import type { Dialog, Receipt, Slot, SlotDetail } from "./types";
+import type {
+  CoordinatorSession,
+  Dialog,
+  Receipt,
+  Slot,
+  SlotDetail,
+} from "./types";
 
 export default function App() {
+  return window.location.pathname === "/login" ? (
+    <LoginPage />
+  ) : (
+    <AppointmentHome />
+  );
+}
+
+function AppointmentHome() {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selected, setSelected] = useState<SlotDetail | null>(null);
   const [search, setSearch] = useState("");
@@ -20,6 +35,8 @@ export default function App() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<CoordinatorSession | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
 
   const counts = useMemo(
     () => ({
@@ -51,17 +68,33 @@ export default function App() {
 
       setSelected(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load appointments.");
+      setError(
+        err instanceof Error ? err.message : "Could not load appointments.",
+      );
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    void refresh();
+    void loadSession().then((currentSession) => {
+      if (currentSession?.isAuthenticated) {
+        void refresh();
+      }
+    });
   }, []);
 
   useEffect(() => {
+    if (!sessionLoading && !session?.isAuthenticated) {
+      window.location.replace("/login");
+    }
+  }, [session, sessionLoading]);
+
+  useEffect(() => {
+    if (!session?.isAuthenticated) {
+      return;
+    }
+
     const timer = window.setTimeout(() => {
       void refresh(selected?.id);
     }, 250);
@@ -75,7 +108,43 @@ export default function App() {
     try {
       setSelected(await api<SlotDetail>(`/api/appointments/slots/${id}`));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load appointment.");
+      setError(
+        err instanceof Error ? err.message : "Could not load appointment.",
+      );
+    }
+  }
+
+  async function loadSession(): Promise<CoordinatorSession | null> {
+    try {
+      const currentSession = await api<CoordinatorSession>("/api/auth/session");
+      setSession(currentSession);
+      return currentSession;
+    } catch (err) {
+      setSession(null);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not check coordinator session.",
+      );
+      return null;
+    } finally {
+      setSessionLoading(false);
+    }
+  }
+
+  async function logout() {
+    if (!session?.requestToken) {
+      return;
+    }
+
+    try {
+      await api<null>("/api/auth/logout", {
+        method: "POST",
+        headers: { "X-CSRF-TOKEN": session.requestToken },
+      });
+      window.location.assign("/login");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not sign out.");
     }
   }
 
@@ -94,6 +163,7 @@ export default function App() {
     try {
       const result = await api<SlotDetail>("/api/appointments/slots", {
         method: "POST",
+        headers: { "X-CSRF-TOKEN": session?.requestToken ?? "" },
         body: JSON.stringify(payload),
       });
 
@@ -115,19 +185,25 @@ export default function App() {
     const form = new FormData(event.currentTarget);
 
     try {
-      const result = await api<Receipt>(`/api/appointments/slots/${selected.id}/bookings`, {
-        method: "POST",
-        body: JSON.stringify({
-          patientName: String(form.get("name") ?? ""),
-          email: String(form.get("email") ?? ""),
-        }),
-      });
+      const result = await api<Receipt>(
+        `/api/appointments/slots/${selected.id}/bookings`,
+        {
+          method: "POST",
+          headers: { "X-CSRF-TOKEN": session?.requestToken ?? "" },
+          body: JSON.stringify({
+            patientName: String(form.get("name") ?? ""),
+            email: String(form.get("email") ?? ""),
+          }),
+        },
+      );
 
       setDialog(null);
       setReceipt(result);
       await refresh(selected.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not book appointment.");
+      setError(
+        err instanceof Error ? err.message : "Could not book appointment.",
+      );
     }
   }
 
@@ -139,6 +215,7 @@ export default function App() {
     try {
       await api<null>("/api/appointments/bookings/cancel", {
         method: "POST",
+        headers: { "X-CSRF-TOKEN": session?.requestToken ?? "" },
         body: JSON.stringify({
           email: String(form.get("email") ?? ""),
           confirmationCode: String(form.get("code") ?? ""),
@@ -149,25 +226,33 @@ export default function App() {
       setNotice("Appointment cancelled and the time is available again.");
       await refresh(selected?.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not cancel appointment.");
+      setError(
+        err instanceof Error ? err.message : "Could not cancel appointment.",
+      );
     }
   }
 
   async function cancelSlot() {
-    if (!selected || !window.confirm("Remove this unbooked appointment slot?")) {
+    if (
+      !selected ||
+      !window.confirm("Remove this unbooked appointment slot?")
+    ) {
       return;
     }
 
     try {
       await api<SlotDetail>(`/api/appointments/slots/${selected.id}/cancel`, {
         method: "PATCH",
+        headers: { "X-CSRF-TOKEN": session?.requestToken ?? "" },
         body: JSON.stringify(selected.revision),
       });
 
       await refresh(selected.id);
       setNotice("Appointment slot cancelled.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not cancel the slot.");
+      setError(
+        err instanceof Error ? err.message : "Could not cancel the slot.",
+      );
     }
   }
 
@@ -176,11 +261,28 @@ export default function App() {
     setNotice("");
   };
 
+  if (sessionLoading) {
+    return (
+      <main className="session-check" role="status">
+        Checking coordinator access…
+      </main>
+    );
+  }
+
+  if (!session?.isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className="app-shell">
-      <AppHeader />
+      <AppHeader
+        username={session?.isAuthenticated ? session.username : null}
+        loading={sessionLoading}
+        onLogout={() => void logout()}
+      />
       <main id="top" className="page-wrap">
         <HeroSection
+          canManage={session?.isAuthenticated === true}
           onCreate={() => {
             setDialog("create");
             clearMessages();
@@ -197,8 +299,20 @@ export default function App() {
           services={counts.services}
         />
 
-        {error && <MessageBanner kind="error" message={error} onDismiss={clearMessages} />}
-        {notice && <MessageBanner kind="success" message={notice} onDismiss={clearMessages} />}
+        {error && (
+          <MessageBanner
+            kind="error"
+            message={error}
+            onDismiss={clearMessages}
+          />
+        )}
+        {notice && (
+          <MessageBanner
+            kind="success"
+            message={notice}
+            onDismiss={clearMessages}
+          />
+        )}
 
         <section className="workspace">
           <SlotList
@@ -212,6 +326,7 @@ export default function App() {
 
           <SlotDetailPanel
             selected={selected}
+            canManage={session?.isAuthenticated === true}
             onClose={() => setSelected(null)}
             onBook={() => {
               setDialog("book");
@@ -222,8 +337,8 @@ export default function App() {
         </section>
 
         <footer className="footer">
-          Personal portfolio demo using synthetic data only. Not a medical device or clinical
-          service; do not enter real patient information.
+          Personal portfolio demo using synthetic data only. Not a medical
+          device or clinical service; do not enter real patient information.
         </footer>
       </main>
 
@@ -238,7 +353,9 @@ export default function App() {
         />
       )}
 
-      {receipt && <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />}
+      {receipt && (
+        <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />
+      )}
     </div>
   );
 }

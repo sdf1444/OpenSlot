@@ -61,6 +61,27 @@ body {
   align-items: center;
   gap: 9px;
 }
+.auth-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.coordinator-name {
+  color: #4d5950;
+  font-size: 11px;
+  font-weight: 650;
+}
+.auth-button {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+  transform: none;
+}
 .live-dot {
   width: 7px;
   height: 7px;
@@ -76,6 +97,74 @@ body {
   max-width: 1260px;
   margin: auto;
   padding: 40px 24px;
+}
+.session-check {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.login-card {
+  width: min(100%, 410px);
+  padding: 34px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 18px 50px #1937290d;
+}
+.login-brand {
+  margin-bottom: 34px;
+}
+.login-card h1 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: -0.8px;
+}
+.login-copy {
+  margin: 9px 0 23px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.login-card label {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0;
+  color: #536057;
+  font-size: 10px;
+  font-weight: 650;
+}
+.login-card input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  font: inherit;
+}
+.login-card input:focus {
+  outline: 2px solid #e1efe5;
+  border-color: #90b69c;
+}
+.login-card .message {
+  margin: 16px 0;
+}
+.login-back {
+  display: block;
+  margin-top: 21px;
+  color: var(--green);
+  font-size: 11px;
+  text-align: center;
+  text-decoration: none;
+}
+.login-back:hover {
+  text-decoration: underline;
 }
 .hero {
   display: flex;
@@ -576,6 +665,9 @@ body {
   }
   .topbar-meta {
     font-size: 9px;
+  }
+  .coordinator-name {
+    display: none;
   }
   .page-wrap {
     padding: 26px 13px;

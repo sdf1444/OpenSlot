@@ -1,0 +1,23 @@
+@baseUrl = http://localhost:8080
+
+### Get session state and an antiforgery token
+# @name coordinatorSession
+GET {{baseUrl}}/api/auth/session
+
+### Sign in as the configured coordinator
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+X-CSRF-TOKEN: {{coordinatorSession.response.body.requestToken}}
+
+{
+  "username": "coordinator",
+  "password": "replace-with-the-configured-password"
+}
+
+### Check the signed-in session
+# @name coordinatorAuthenticatedSession
+GET {{baseUrl}}/api/auth/session
+
+### Sign out
+POST {{baseUrl}}/api/auth/logout
+X-CSRF-TOKEN: {{coordinatorAuthenticatedSession.response.body.requestToken}}

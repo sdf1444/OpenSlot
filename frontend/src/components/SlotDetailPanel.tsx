@@ -3,6 +3,7 @@ import type { SlotDetail } from "../types";
 
 type SlotDetailPanelProps = {
   selected: SlotDetail | null;
+  canManage: boolean;
   onClose: () => void;
   onBook: () => void;
   onCancelSlot: () => void;
@@ -10,6 +11,7 @@ type SlotDetailPanelProps = {
 
 export function SlotDetailPanel({
   selected,
+  canManage,
   onClose,
   onBook,
   onCancelSlot,
@@ -30,7 +32,9 @@ export function SlotDetailPanel({
     <aside className="detail-panel">
       <div className="detail-head">
         <div>
-          <span className={`badge ${selected.state.toLowerCase()}`}>{selected.state}</span>
+          <span className={`badge ${selected.state.toLowerCase()}`}>
+            {selected.state}
+          </span>
           <p className="eyebrow">{selected.clinicName}</p>
           <h2>{selected.serviceType}</h2>
           <p className="provider">with {selected.providerName}</p>
@@ -44,14 +48,16 @@ export function SlotDetailPanel({
         <span>Date and time</span>
         <b>{formatDateOnly(selected.startsAt)}</b>
         <small>
-          {formatDateTime(selected.startsAt)} – {formatClockTime(selected.endsAt)}
+          {formatDateTime(selected.startsAt)} –{" "}
+          {formatClockTime(selected.endsAt)}
         </small>
         <span>Location</span>
         <b>{selected.clinicName}</b>
         <span>Appointment length</span>
         <b>
           {Math.round(
-            (new Date(selected.endsAt).getTime() - new Date(selected.startsAt).getTime()) /
+            (new Date(selected.endsAt).getTime() -
+              new Date(selected.startsAt).getTime()) /
               60000,
           )}{" "}
           minutes
@@ -70,7 +76,7 @@ export function SlotDetailPanel({
         </p>
       )}
 
-      {selected.state === "Available" && (
+      {canManage && selected.state === "Available" && (
         <button className="text-danger" onClick={onCancelSlot}>
           Remove this slot
         </button>

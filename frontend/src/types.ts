@@ -30,3 +30,9 @@ export type Receipt = {
 };
 
 export type Dialog = "create" | "book" | "cancel" | null;
+
+export type CoordinatorSession = {
+  isAuthenticated: boolean;
+  username: string | null;
+  requestToken: string;
+};

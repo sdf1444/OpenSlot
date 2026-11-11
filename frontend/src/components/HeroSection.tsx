@@ -1,9 +1,14 @@
 type HeroSectionProps = {
+  canManage: boolean;
   onCreate: () => void;
   onManageBooking: () => void;
 };
 
-export function HeroSection({ onCreate, onManageBooking }: HeroSectionProps) {
+export function HeroSection({
+  canManage,
+  onCreate,
+  onManageBooking,
+}: HeroSectionProps) {
   return (
     <section className="hero">
       <div>
@@ -22,9 +27,11 @@ export function HeroSection({ onCreate, onManageBooking }: HeroSectionProps) {
         <button className="button button-outline" onClick={onManageBooking}>
           Manage a booking
         </button>
-        <button className="button button-primary" onClick={onCreate}>
-          ＋ Add appointment
-        </button>
+        {canManage && (
+          <button className="button button-primary" onClick={onCreate}>
+            ＋ Add appointment
+          </button>
+        )}
       </div>
     </section>
   );
