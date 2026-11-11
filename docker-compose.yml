@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: appointments
+      POSTGRES_USER: appointments
+      POSTGRES_PASSWORD: replace-with-a-unique-strong-password
+    volumes:
+      - appointments-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appointments -d appointments"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  app:
+    build: .
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Appointments: Host=db;Port=5432;Database=appointments;Username=appointments;Password=replace-with-a-unique-strong-password
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  appointments-data:

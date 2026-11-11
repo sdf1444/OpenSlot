@@ -1,0 +1,22 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore src/AppointmentSlots.Api/AppointmentSlots.Api.csproj
+      - run: dotnet build src/AppointmentSlots.Api/AppointmentSlots.Api.csproj --configuration Release --no-restore
+      - run: dotnet test tests/AppointmentSlots.Tests/AppointmentSlots.Tests.csproj --configuration Release
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --prefix frontend
+      - run: npm run build --prefix frontend
