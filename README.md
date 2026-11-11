@@ -16,7 +16,15 @@ All seeded data is synthetic. This demo is not a clinical service or medical dev
 
 Requires Docker Desktop or Docker Engine with Compose.
 
-```bash
+Create a local `.env` file and set a unique password for the demo database:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Edit `.env` and replace the placeholder with a unique, strong password. The `.env` file is ignored by Git.
+
+```powershell
 docker compose up --build
 ```
 
@@ -32,19 +40,21 @@ The health endpoint is `GET /api/health`.
 
 ## Run locally without Docker
 
-Requires the .NET 10 SDK, Node.js 22+, and PostgreSQL 16. Start PostgreSQL with the connection string in `src/AppointmentSlots.Api/appsettings.json`, then run the API and UI in separate terminals.
+Requires the .NET 10 SDK, Node.js 22+, and PostgreSQL 16. Set `ConnectionStrings__Appointments` to a connection string for your local PostgreSQL instance, then run the API and UI in separate terminals.
 
-```bash
-ASPNETCORE_URLS=http://localhost:8080 dotnet run --project src/AppointmentSlots.Api/AppointmentSlots.Api.csproj
+```powershell
+$env:ConnectionStrings__Appointments = 'Host=localhost;Port=5432;Database=appointments;Username=appointments;Password=your-local-password'
+$env:ASPNETCORE_URLS = 'http://localhost:8080'
+dotnet run --project src/AppointmentSlots.Api/AppointmentSlots.Api.csproj
 ```
 
-```bash
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-Vite serves the UI at `http://localhost:5173` and proxies `/api` requests to the API at `http://localhost:8080`. In PowerShell, set `$env:ASPNETCORE_URLS = 'http://localhost:8080'` before running the API command.
+Vite serves the UI at `http://localhost:5173` and proxies `/api` requests to the API at `http://localhost:8080`.
 
 ## Test the C# rules
 

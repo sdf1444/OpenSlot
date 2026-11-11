@@ -4,7 +4,7 @@ using AppointmentSlots.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 var connection = builder.Configuration.GetConnectionString("Appointments")
-    ?? "Host=localhost;Port=5432;Database=appointments;Username=appointments;Password=replace-with-a-unique-strong-password";
+    ?? throw new InvalidOperationException("The 'Appointments' connection string is not configured.");
 builder.Services.AddDbContext<AppointmentDbContext>(o => o.UseNpgsql(connection));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<AppointmentService>();

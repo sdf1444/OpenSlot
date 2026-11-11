@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: appointments
       POSTGRES_USER: appointments
-      POSTGRES_PASSWORD: replace-with-a-unique-strong-password
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
     volumes:
       - appointments-data:/var/lib/postgresql/data
     healthcheck:
@@ -16,7 +16,7 @@ services:
     build: .
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__Appointments: Host=db;Port=5432;Database=appointments;Username=appointments;Password=replace-with-a-unique-strong-password
+      ConnectionStrings__Appointments: "Host=db;Port=5432;Database=appointments;Username=appointments;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
     ports:
       - "8080:8080"
     depends_on:

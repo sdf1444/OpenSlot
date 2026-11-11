@@ -4,4 +4,6 @@
 **/dist/
 TestResults/
 .env
+.env.*
+!.env.example
 *.user
